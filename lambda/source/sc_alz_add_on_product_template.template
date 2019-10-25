@@ -1,0 +1,110 @@
+# Copyright 2012-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Amazon Software License (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+# http://aws.amazon.com/asl/
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Service Catalog - ALZ Add-On Product Template
+
+Parameters:
+  #General Inputs, applies to all Add-Ons
+  SourceBucketName:
+    Type: String
+    Description: Source S3 bucket name
+    Default: 'alz-addon-products'
+
+  SourceKeyName:
+    Type: String
+    Description: Name of Add-On product package zip file in source S3 bucket
+    Default: 'alz-addon-products.zip'
+
+  AccountName:
+    Description: In which Account do you wish to deploy?
+    Type: String
+    Default: shared-services
+
+  OUName:
+    Description: Which OU does the above Account belong to?
+    Type: String
+    Default: core
+
+  Region:
+    Description: In which Region do you want to deploy this Add-On product?
+    Type: String
+
+  MergeAddOn:
+    Type: String
+    Description: Do you want to trigger the pipeline right away to deploy the Add-On product?
+    Default: 'Yes'
+    AllowedValues:
+    - 'Yes'
+    - 'No'
+
+  #Add-On product specific Inputs
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Source S3 Bucket Configuration
+        Parameters:
+          - SourceBucketName
+          - SourceKeyName
+      - Label:
+          default: Target Account/Region Selection
+        Parameters:
+          - AccountName
+          - OUName
+          - Region
+      - Label:
+          default: Landing Zone Pipeline Configuration
+        Parameters:
+          - MergeAddOn
+Mappings:
+  BucketConfiguration:
+    DestinationKeyName:
+      Name: aws-landing-zone-configuration.zip
+  LambdaFunction:
+    Logging:
+      Level: 'info'
+
+Resources:
+  LandingZoneAddOnDeploymentLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Environment:
+        Variables:
+          log_level: !FindInMap [LambdaFunction, Logging, Level]
+      Code:
+        S3Bucket: !Sub solutions-${AWS::Region}
+        S3Key: aws-landing-zone/v2.0.1/aws-landing-zone-add-on-config-deployer.zip
+      Description: AWS Landing Zone Add-On Deployment Lambda
+      Handler: add_on_config_deployer.lambda_handler
+      MemorySize: '512'
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LandingZoneDeploymentLambdaRole
+      Runtime: python3.6
+      Timeout: '300'
+      TracingConfig:
+          Mode: Active
+  LandingZoneAddOnConfigDeployer:
+    Type: Custom::AddOnConfigDeployer
+    Properties:
+      bucket_config:
+        destination_bucket_name: !Sub aws-landing-zone-configuration-${AWS::AccountId}-${AWS::Region}
+        destination_s3_key: !FindInMap [BucketConfiguration, DestinationKeyName, Name]
+        source_bucket_name: !Ref SourceBucketName
+        source_s3_key: !Ref SourceKeyName
+        merge_add_on: !Ref MergeAddOn
+      find_replace:
+        - file_name: user-input.yaml
+          parameters:
+            OUName: !Ref OUName
+            AccountName: !Ref AccountName
+            Region: !Ref Region
+      ServiceToken: !GetAtt LandingZoneAddOnDeploymentLambda.Arn

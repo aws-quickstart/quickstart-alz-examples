@@ -1,0 +1,37 @@
+---
+
+# Landing Zone Core Account Structure
+organizational_units:
+  # Landing Zone OU for Core accounts
+  - name: {{ core_ou }} #jinja syntax
+    core_accounts:
+      # Security account
+      - name: {{ core_account }} #jinja syntax
+        core_resources:
+        - name: ProductName
+          template_file: templates/core_accounts/aws-landing-zone-ProductName.template
+          parameter_file: parameters/core_accounts/aws-landing-zone-ProductName.json
+          deploy_method: stack_set
+          #ssm_parameters:
+          #  - name: /org/member/centrallogging/es_domain
+          #    value: $[output_DomainEndpoint]
+          #  - name: /org/member/centrallogging/master_role
+          #    value: $[output_MasterRole]
+          regions:
+            - {{ region }} # jinja syntax
+
+
+# Landing Zone Service Baseline Resources
+# baseline_resources:  Not needed at this point
+#   - name: CentralizedLoggingSpoke
+#     baseline_products:
+#      {%- for avm_product in avm_products %}
+#      - {{ avm_product }}
+#      {%- endfor %}
+#     template_file: templates/aws_baseline/aws-landing-zone-centralized-logging-spoke.template
+#     parameter_file: parameters/aws_baseline/aws-landing-zone-centralized-logging-spoke.json
+#     deploy_method: stack_set
+#     regions:
+#     {%- for region in spoke_regions %}
+#     - {{ region }}
+#     {%- endfor %}

@@ -1,0 +1,11 @@
+input_parameters:
+  - file_name: add_on_manifest.yaml
+    parameters:
+      SourceBucketName: {{ SourceBucketName }} #jinja syntax
+      SourceKeyName: {{ SourceKeyName }} #jinja syntax
+      core_ou: {{ OUName }} #jinja syntax
+      core_account: {{ AccountName }} #jinja syntax
+      region: {{ Region }} # jinja syntax
+      MergeAddOn: {{ MergeAddOn }} # jinja syntax
+  - file_name: parameters/core_accounts/productParameterFileName.json
+    productParameters
