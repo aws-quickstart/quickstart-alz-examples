@@ -154,6 +154,10 @@ Resources:
       Prefix: !Ref 'SourceS3KeyPrefix'
       Objects:
         - lambda/package/function.zip
+      AddonBucket: !Ref 'AddOnS3Bucket'
+      AddonArtifacts:
+        - !Sub alz-qs-${ProductName}.zip
+        - !Sub sc-${ProductName}.template
   
   # Copy zip files from source bucket
   CopyZipsFunction:
@@ -204,8 +208,11 @@ Resources:
                   dest_bucket = event['ResourceProperties']['DestBucket']
                   prefix = event['ResourceProperties']['Prefix']
                   objects = event['ResourceProperties']['Objects']
+                  addon_bucket = event['ResourceProperties']['AddonBucket']
+                  addon_artifacts = event['ResourceProperties']['AddonArtifacts']
                   if event['RequestType'] == 'Delete':
                       delete_objects(dest_bucket, prefix, objects)
+                      delete_objects(addon_bucket, "", addon_artifacts)
                   else:
                       copy_objects(source_bucket, dest_bucket, prefix, objects)
               except Exception as e:
@@ -239,12 +246,14 @@ Resources:
                   - s3:GetObject
                 Resource:
                   - !Sub 'arn:aws:s3:::${SourceS3Bucket}/${SourceS3KeyPrefix}*'
+                  - !Sub 'arn:aws:s3:::${AddOnS3Bucket}*'
               - Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:DeleteObject
                 Resource:
                   - !Sub 'arn:aws:s3:::${TempS3Bucket}/${SourceS3KeyPrefix}*'
+                  - !Sub 'arn:aws:s3:::${AddOnS3Bucket}*'
   
   InvokeStateMachineStack:
     Type: 'AWS::CloudFormation::Stack'
