@@ -8,15 +8,7 @@
         "ParameterValue": "https://aws-quickstart.s3.amazonaws.com/quickstart-f5-big-ip-virtual-edition/templates/master.template"
     },
     {
-        "ParameterKey": "SourceS3Bucket",
-        "ParameterValue": "$[taskcat_autobucket]"
-    },
-    {
-        "ParameterKey": "SourceS3KeyPrefix",
-        "ParameterValue": "quickstart-alz-examples/"
-    },
-    {
         "ParameterKey": "AddOnS3Bucket",
-        "ParameterValue": "$[taskcat_getval_SourceS3Bucket]"
+        "ParameterValue": "$[taskcat_autobucket]"
     }
 ]
