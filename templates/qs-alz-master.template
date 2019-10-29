@@ -47,7 +47,7 @@ Resources:
       Description: Lambda function to create Input files for AddOn
       Code:
         S3Bucket: !Ref TempS3Bucket
-        S3Key: !Sub ${SourceS3KeyPrefix}lambda/package/function.zip
+        S3Key: quickstart-alz-examples/lambda/package/function.zip
       Handler: create_input_files.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.7
@@ -61,7 +61,7 @@ Resources:
       Description: Lambda function to create zip file for AddOn
       Code:
         S3Bucket: !Ref TempS3Bucket
-        S3Key: !Sub ${SourceS3KeyPrefix}lambda/package/function.zip
+        S3Key: !Sub quickstart-alz-examples/lambda/package/function.zip
       Handler: create_add_on_zip.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.7
@@ -75,7 +75,7 @@ Resources:
       Description: Lambda function to create SC template for AddOn
       Code:
         S3Bucket: !Ref TempS3Bucket
-        S3Key: !Sub ${SourceS3KeyPrefix}lambda/package/function.zip
+        S3Key: !Sub quickstart-alz-examples/lambda/package/function.zip
       Handler: create_sc_template.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.7
@@ -150,8 +150,8 @@ Resources:
     Properties:
       ServiceToken: !GetAtt 'CopyZipsFunction.Arn'
       DestBucket: !Ref 'TempS3Bucket'
-      SourceBucket: !Ref 'SourceS3Bucket'
-      Prefix: !Ref 'SourceS3KeyPrefix'
+      SourceBucket: aws-quickstart
+      Prefix: "quickstart-alz-examples/"
       Objects:
         - lambda/package/function.zip
       AddonBucket: !Ref 'AddOnS3Bucket'
@@ -245,28 +245,33 @@ Resources:
                 Action:
                   - s3:GetObject
                 Resource:
-                  - !Sub 'arn:aws:s3:::${SourceS3Bucket}/${SourceS3KeyPrefix}*'
+                  - !Sub 'arn:aws:s3:::aws-quickstart/quickstart-alz-examples/*'
                   - !Sub 'arn:aws:s3:::${AddOnS3Bucket}*'
               - Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:DeleteObject
                 Resource:
-                  - !Sub 'arn:aws:s3:::${TempS3Bucket}/${SourceS3KeyPrefix}*'
+                  - !Sub 'arn:aws:s3:::${TempS3Bucket}/quickstart-alz-examples/*'
                   - !Sub 'arn:aws:s3:::${AddOnS3Bucket}*'
   
   InvokeStateMachineStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
-      TemplateURL: !Sub 'https://${SourceS3Bucket}.s3.amazonaws.com/${SourceS3KeyPrefix}templates/invoke-sm.template'
+      TemplateURL: !Sub 'https://aws-quickstart.s3.amazonaws.com/quickstart-alz-examples/templates/invoke-sm.template'
       Parameters:
         ProductName: !Ref ProductName
         StateMachineArn: !Ref StateMachine
         AddOnS3Bucket: !Ref AddOnS3Bucket
         ProductS3Url: !Ref ProductS3Url
         TempS3Bucket: !Ref TempS3Bucket
-        SourceS3KeyPrefix: !Ref SourceS3KeyPrefix
+        SourceS3KeyPrefix: "quickstart-alz-examples/"
 
+Mappings:
+  ParameterMap:
+    Values:
+      SourceS3KeyPrefix: "quickstart-alz-examples/"
+      
 Outputs:
   oStateMachine:
     Description: State Machine
@@ -304,20 +309,3 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-  
-  SourceS3Bucket:
-    Type: String
-    Default: aws-quickstart
-    Description: Name of the S3 bucket which contains the template and Lambda function.zip package
-    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
-    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
-      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
-      (-).
-
-  SourceS3KeyPrefix:
-    Type: String
-    Default: quickstart-alz-examples/
-    Description: S3 Key Prefix for Lambda function.zip
-    AllowedPattern: ^[0-9a-zA-Z-/]*$
-    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
-      uppercase letters, hyphens (-), and a forward slash (/) at the end of the prefix.
