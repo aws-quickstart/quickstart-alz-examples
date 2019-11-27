@@ -1,0 +1,180 @@
+# Copyright 2012-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Amazon Software License (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+# http://aws.amazon.com/asl/
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Service Catalog - ALZ Add-On Product Template
+
+Parameters:
+  #General Inputs, applies to all Add-Ons
+  SourceBucketName:
+    Type: String
+    Description: Source S3 bucket name
+    Default: 'alz-add-on-products'
+
+  SourceKeyName:
+    Type: String
+    Description: Name of Add-On product package zip file in source S3 bucket
+    Default: 'alz-transit-gateway.zip'
+
+  AccountName:
+    Description: In which Account do you wish to deploy?
+    Type: String
+    Default: network
+
+  OUName:
+    Description: Which OU does the above Account belong to?
+    Type: String
+    Default: core
+
+  Region:
+    Description: In which Region do you want to deploy this Add-On product?
+    Type: String
+
+  MergeAddOn:
+    Type: String
+    Description: Do you want to trigger the pipeline right away to deploy the Add-On
+      product?
+    Default: 'Yes'
+    AllowedValues:
+    - 'Yes'
+    - 'No'
+
+  #Add-On product specific Inputs
+  pAmazonAsn: # Amazon side BGP ASN
+    Type: String
+    Description: A private Autonomous System Number (ASN) for the Amazon side of a
+      BGP session.
+    Default: 65000
+    MinLength: 5
+    MaxLength: 10
+    ConstraintDescription: The range is 64512 to 65534 for 16-bit ASNs and 4200000000
+      to 4294967294 for 32-bit ASNs.
+
+  pAutoAcceptSharedAttachments: # enable/disable attachment requests
+    Type: String
+    Description: Indicates whether cross-account attachment requests are automatically
+      accepted.
+    Default: "disable"
+    AllowedValues:
+    - "enable"
+    - "disable"
+
+  pDefaultRouteTableAssociation: # enable/disable automatic route table association
+    Type: String
+    Description: Enable or disable automatic association with the default association
+      route table.
+    Default: "enable"
+    AllowedValues:
+    - "enable"
+    - "disable"
+
+  pDefaultRouteTablePropagation: # enable/disable automatic route propagation to the default route table
+    Type: String
+    Description: Enable or disable automatic propagation of routes to the default
+      propagation route table.
+    Default: "enable"
+    AllowedValues:
+    - "enable"
+    - "disable"
+
+  pDnsSupport: # Enable or disable DNS support
+    Type: String
+    Description: Enable or disable DNS support.
+    Default: "enable"
+    AllowedValues:
+    - "enable"
+    - "disable"
+
+  pVpnEcmpSupport: # Enable or disable Equal Cost Multipath Protocol
+    Type: String
+    Description: Enable or disable Equal Cost Multipath Protocol.
+    Default: "enable"
+    AllowedValues:
+    - "enable"
+    - "disable"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Source S3 Bucket Configuration
+      Parameters:
+      - SourceBucketName
+      - SourceKeyName
+    - Label:
+        default: Target Account/Region Selection
+      Parameters:
+      - AccountName
+      - OUName
+      - Region
+    - Label:
+        default: Landing Zone Pipeline Configuration
+      Parameters:
+      - MergeAddOn
+    - Label: # Transit Gateway Configuration
+        default: Transit Gateway Configuration
+      Parameters: # Label Parameters
+      - pAmazonAsn
+      - pAutoAcceptSharedAttachments
+      - pDefaultRouteTableAssociation
+      - pDefaultRouteTablePropagation
+      - pDnsSupport
+      - pVpnEcmpSupport
+
+Mappings:
+  BucketConfiguration:
+    DestinationKeyName:
+      Name: aws-landing-zone-configuration.zip
+  LambdaFunction:
+    Logging:
+      Level: 'info'
+
+Resources:
+  LandingZoneAddOnDeploymentLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Environment:
+        Variables:
+          log_level: !FindInMap [LambdaFunction, Logging, Level]
+      Code:
+        S3Bucket: !Sub solutions-${AWS::Region}
+        S3Key: aws-landing-zone/v2.2.0/aws-landing-zone-add-on-config-deployer.zip
+      Description: AWS Landing Zone Add-On Deployment Lambda
+      Handler: add_on_config_deployer.lambda_handler
+      MemorySize: '512'
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LandingZoneDeploymentLambdaRole
+      Runtime: python3.6
+      Timeout: '300'
+      TracingConfig:
+        Mode: Active
+  LandingZoneAddOnConfigDeployer:
+    Type: Custom::AddOnConfigDeployer
+    Properties:
+      bucket_config:
+        destination_bucket_name: !Sub aws-landing-zone-configuration-${AWS::AccountId}-${AWS::Region}
+        destination_s3_key: !FindInMap [BucketConfiguration, DestinationKeyName, Name]
+        source_bucket_name: !Ref SourceBucketName
+        source_s3_key: !Ref SourceKeyName
+        merge_add_on: !Ref MergeAddOn
+      find_replace:
+      - file_name: user-input.yaml
+        parameters:
+          OUName: !Ref OUName
+          AccountName: !Ref AccountName
+          Region: !Ref Region
+          pAmazonAsn: !Ref pAmazonAsn
+          pAutoAcceptSharedAttachments: !Ref pAutoAcceptSharedAttachments
+          pDefaultRouteTableAssociation: !Ref pDefaultRouteTableAssociation
+          pDefaultRouteTablePropagation: !Ref pDefaultRouteTablePropagation
+          pDnsSupport: !Ref pDnsSupport
+          pVpnEcmpSupport: !Ref pVpnEcmpSupport
+      ServiceToken: !GetAtt LandingZoneAddOnDeploymentLambda.Arn
