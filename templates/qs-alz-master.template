@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
-Description: Deploys state machine and all other resources to create Add On for ALZ
+Description: Deploys state machine and all other resources to create Add On for ALZ (qs-1r0ss39qh)
 Resources:
   # Deploys state machine
   StateMachine:
