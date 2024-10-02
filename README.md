@@ -1,4 +1,9 @@
-# ISV product packaging solution for AWS Landing Zone
+## Deprecation Notice
+
+:x: This repository is subject to deprecation in Q4 2024. For more details, [please review this announcement](https://github.com/aws-ia/.announcements/issues/1). 
+
+
+## ISV product packaging solution for AWS Landing Zone
 
 The Amazon Web Services (AWS) Landing Zone solution automates customers’ landing zone deployment and configuration with AWS security and operation best practices. AWS Control Tower extends AWS Landing Zone as a managed landing zone service to further simplify landing zone deployment and management. But after customers set up their landing zone environments through either AWS Landing Zone or AWS Control Tower, they can encounter challenges when deploying additional AWS solutions or Independent Software Vendor (ISV) products, all referred to as add-on products, in their environments.
 
